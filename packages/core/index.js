@@ -89,6 +89,12 @@ export class Rebase {
     };
   }
 
+  transform(source, options = {}) {
+    const host = options.host ?? this.options.host;
+    const scope = options.scope ?? this.scope;
+    return this.syntax.process(source, scope, this, { host });
+  }
+
   render(record) {
     let html = record.source;
     html = this.syntax.process(html, record.scope, this);
@@ -149,13 +155,15 @@ export class SyntaxRegistry {
     return !this.disabled.get(type)?.has(name);
   }
 
-  process(source, scope, rebase) {
+  process(source, scope, rebase, options = {}) {
     let output = source;
+    const host = options.host ?? rebase.options.host;
 
-    output = processBlocks(output, this.blocks, scope, rebase, this);
+    output = processBlocks(output, this.blocks, scope, rebase, this, host);
     output = processDirectives(output, this.directives, scope, rebase);
-    output = processExpressions(output, this.expressions, scope, rebase);
-    return interpolate(output, scope);
+    if (!host) output = processExpressions(output, this.expressions, scope, rebase);
+    if (!host) output = interpolate(output, scope);
+    return output;
   }
 }
 
@@ -206,11 +214,12 @@ function processBuiltInBody(body, scope) {
   );
 }
 
-function processBlocks(source, blocks, scope, rebase, registry) {
+function processBlocks(source, blocks, scope, rebase, registry, host) {
   const pattern = /\\{#([A-Za-z_$][\\w$-]*)(?:\\s+([^}]*))?\\}([\\s\\S]*?)\\{\\/([A-Za-z_$][\\w$-]*)\\}/g;
 
   return source.replace(pattern, (full, name, expression = "", body, closing) => {
     if (name !== closing || !registry.isEnabled("block", name)) return full;
+    if (host && !registry.isEnabled("block", name)) return full;
     const entry = blocks.get(name);
     if (!entry) return full;
 
