@@ -1,0 +1,10 @@
+{
+  "name": "@rebase/core",
+  "version": "1.0.0-beta.1",
+  "description": "The core runtime and plugin API for Rebase.",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@rebase/adapters",
+  "version": "1.0.0-beta.1",
+  "description": "Host-framework adapters for Rebase.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./svelte": "./svelte.js",
+    "./vue": "./vue.js",
+    "./react": "./react.js"
+  },
+  "peerDependencies": {
+    "@rebase/core": "1.0.0-beta.1"
+  },
+  "license": "MIT"
+}

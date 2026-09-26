@@ -1,7 +1,15 @@
 {
   "name": "rebase",
-  "version": "0.3.0",
+  "version": "1.0.0-beta.1",
+  "description": "A JavaScript-first enhancement layer for the web.",
   "type": "module",
-  "main": "./index.js",
-  "exports": "./index.js"
+  "main": "index.js",
+  "module": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "dependencies": {
+    "@rebase/core": "1.0.0-beta.1"
+  },
+  "license": "MIT"
 }
