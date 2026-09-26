@@ -1,0 +1,8 @@
+{
+  "name": "@rebase/core",
+  "version": "1.0.0-alpha.1",
+  "description": "Framework-agnostic JavaScript core and plugin API for Rebase.",
+  "type": "module",
+  "exports": { ".": "./index.js" },
+  "license": "MIT"
+}
