@@ -25,40 +25,6 @@ It is designed to work alongside:
 
 Rebase only owns syntax that the active Rebase instance explicitly registers. Host-framework syntax is left alone.
 
-## Installation
-
-### Package
-
-```bash
-npm install rebase
-```
-
-Then:
-
-```js
-import { createRebase } from "rebase";
-
-const rebase = createRebase();
-
-rebase.directive("hello", ({ expression }) =>
-  `<strong>Hello ${expression}</strong>`
-);
-```
-
-### Core package
-
-For library authors and integrations:
-
-```bash
-npm install @rebase/core
-```
-
-### Documentation
-
-Full documentation and API reference:
-
-**https://js-rebase.github.io**
-
 ## Syntax
 
 Rebase has three extension points:
@@ -83,37 +49,10 @@ Example:
 
 ## Plugins
 
-A plugin is just a normal JavaScript package.
+A plugin is a normal JavaScript module that registers its capabilities with Rebase.
 
-```js
-export default {
-  name: "rebase-lucide",
+This means a plugin cannot silently change a user's Rebase instance merely by being available in the project.
 
-  install(rebase) {
-    rebase.directive("lucide", ({ expression }) => {
-      // return the generated HTML/SVG
-    });
-  }
-};
-```
-
-Users install plugins separately:
-
-```bash
-npm install rebase rebase-lucide
-```
-
-and enable them explicitly:
-
-```js
-import { createRebase } from "rebase";
-import lucide from "rebase-lucide";
-
-const rebase = createRebase();
-rebase.use(lucide);
-```
-
-This means a plugin cannot silently change a user's Rebase instance merely by existing in `node_modules`.
 
 ## Framework compatibility
 
@@ -187,12 +126,11 @@ Plugin handlers receive a context containing:
 Requirements:
 
 - Node.js 20+
-- npm
 
 Run the test suite:
 
 ```bash
-npm test
+node --test packages/core/test/*.test.js
 ```
 
 ## Status
