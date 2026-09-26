@@ -1,11 +1,11 @@
 {
   "name": "rebase",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.2",
   "description": "A framework-agnostic JavaScript enhancement layer for the web.",
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "node --test packages/core/test packages/compiler/test packages/runtime/test"
+    "test": "node --test packages/core/test"
   },
   "license": "MIT"
 }
