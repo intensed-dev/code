@@ -1,7 +1,7 @@
 {
   "name": "@rebase/adapters",
-  "version": "1.0.0-alpha.1",
-  "description": "Non-invasive source adapters for Rebase host frameworks.",
+  "version": "1.0.0-beta.1",
+  "description": "Host-framework adapters for Rebase.",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -11,7 +11,7 @@
     "./react": "./react.js"
   },
   "peerDependencies": {
-    "@rebase/core": "1.0.0-alpha.1"
+    "@rebase/core": "1.0.0-beta.1"
   },
   "license": "MIT"
 }
