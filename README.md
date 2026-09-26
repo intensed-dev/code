@@ -1,78 +1,135 @@
 # Rebase
 
-Rebase is a small **JavaScript enhancement layer for the web**.
+[![Beta](https://img.shields.io/badge/status-beta-7c3aed.svg)](https://github.com/intensed-dev/code)
+[![License](https://img.shields.io/github/license/intensed-dev/code.svg)](LICENSE)
+[![Tests](https://img.shields.io/github/actions/workflow/status/intensed-dev/code/ci.yml?label=tests)](https://github.com/intensed-dev/code/actions)
 
-It does not replace your framework. It sits on top of HTML, JavaScript, Svelte, Vue, React, and other web stacks and adds opt-in functionality through a plugin API.
+**A JavaScript-first enhancement layer for the web.**
 
-> Rebase doesn't replace your stack. It adds to it.
+Rebase adds small, opt-in features to HTML and existing web stacks without trying to become another framework.
 
-## Design principles
+> **Rebase doesn't replace your stack. It adds to it.**
 
-- **JavaScript first**
-- **Framework agnostic**
-- **Opt-in syntax**
-- **Plugins before features**
-- **Never consume host syntax by accident**
-- Works from a CDN, local files, or a package installation
+## What Rebase is
+
+Rebase is a small runtime and plugin API for extending web markup with explicitly registered syntax.
+
+It is designed to work alongside:
+
+- HTML
+- JavaScript
+- Svelte
+- Vue
+- React
+- other build systems and frameworks
+
+Rebase only owns syntax that the active Rebase instance explicitly registers. Host-framework syntax is left alone.
+
+## Installation
+
+### Package
+
+```bash
+npm install rebase
+```
+
+Then:
+
+```js
+import { createRebase } from "rebase";
+
+const rebase = createRebase();
+
+rebase.directive("hello", ({ expression }) =>
+  `<strong>Hello ${expression}</strong>`
+);
+```
+
+### Core package
+
+For library authors and integrations:
+
+```bash
+npm install @rebase/core
+```
+
+### Documentation
+
+Full documentation and API reference:
+
+**https://js-rebase.github.io**
 
 ## Syntax
 
 Rebase has three extension points:
 
-- `{name}` — simple registered expressions
-- `{@name ...}` — directives
-- `{#name ...}...{/name}` — blocks
+| Syntax | Purpose |
+| --- | --- |
+| `{@name ...}` | Directive |
+| `{#name ...}{/name}` | Block |
+| `{{ expression }}` | Runtime interpolation |
 
-A plugin can register any of them:
+A plugin registers its own names. Rebase does not reserve arbitrary syntax globally.
+
+Example:
+
+```html
+{@icon lucide:arrow-up}
+
+{#feature}
+  <p>Plugin-provided content.</p>
+{/feature}
+```
+
+## Plugins
+
+A plugin is just a normal JavaScript package.
 
 ```js
 export default {
-  name: "@rebase/example",
+  name: "rebase-lucide",
 
   install(rebase) {
-    rebase.expression("version", () => "1.0.0");
-
-    rebase.directive("hello", ({ expression }) =>
-      `<strong>Hello ${expression}</strong>`
-    );
-
-    rebase.block("feature", ({ body }) =>
-      `<section>${body}</section>`
-    );
+    rebase.directive("lucide", ({ expression }) => {
+      // return the generated HTML/SVG
+    });
   }
 };
 ```
 
-Then:
+Users install plugins separately:
 
-```html
-{@hello World}
-
-{#feature}
-  Rebase content
-{/feature}
+```bash
+npm install rebase rebase-lucide
 ```
+
+and enable them explicitly:
+
+```js
+import { createRebase } from "rebase";
+import lucide from "rebase-lucide";
+
+const rebase = createRebase();
+rebase.use(lucide);
+```
+
+This means a plugin cannot silently change a user's Rebase instance merely by existing in `node_modules`.
 
 ## Framework compatibility
 
-Rebase does **not** automatically reinterpret framework syntax.
+Rebase is intentionally non-invasive.
 
-For Svelte, use the Svelte adapter:
+For Svelte, the adapter protects native blocks such as:
 
-```js
-import { createSvelteRebase } from "@rebase/adapters/svelte";
+- `{#if}`
+- `{#each}`
+- `{#await}`
+- `{#key}`
+- `{#snippet}`
 
-const rebase = createSvelteRebase();
-rebase.directive("date", ({ expression }) =>
-  new Date(expression).toLocaleString()
-);
-```
+The Vue and React adapters provide the same host-aware entry point. Framework-specific source transformations remain the responsibility of the corresponding integration.
 
-The adapter reserves Svelte's native blocks such as `{#if}`, `{#each}`, `{#await}`, `{#key}`, and `{#snippet}`.
-
-Vue and React are similarly treated as host frameworks. Rebase should only consume syntax explicitly registered by the Rebase instance.
-
-## Plugin API
+## API
 
 The public API is intentionally small:
 
@@ -82,9 +139,11 @@ rebase.directive(name, handler)
 rebase.block(name, handler)
 rebase.hook(name, handler)
 rebase.use(plugin)
+rebase.transform(source, options)
+rebase.mount(target, options)
 ```
 
-Handlers receive:
+Plugin handlers receive a context containing:
 
 ```js
 {
@@ -96,31 +155,53 @@ Handlers receive:
 }
 ```
 
-This makes new Rebase syntax possible without changing the core parser.
+## Repository structure
 
-## Example
-
-```html
-<h1>{title}</h1>
-
-{@icon lucide:arrow-up}
-
-{#feature}
-  <p>Plugin-provided content.</p>
-{/feature}
+```text
+.
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   └── workflows/
+├── packages/
+│   ├── core/
+│   │   ├── index.js
+│   │   └── test/
+│   ├── adapters/
+│   │   ├── svelte.js
+│   │   ├── vue.js
+│   │   └── react.js
+│   └── rebase/
+│       └── index.js
+├── AGENTS.md
+├── CONTRIBUTING.md
+├── CODE_OF_CONDUCT.md
+├── LICENSE
+├── README.md
+├── ROADMAP.md
+├── SECURITY.md
+└── package.json
 ```
 
-The important distinction is that `{#if}` is not inherently "Rebase syntax". It is only Rebase syntax when the active Rebase instance has registered it and the host framework has not reserved it.
+## Development
 
-## Packages
+Requirements:
 
-- `@rebase/core` — JavaScript core and syntax/plugin API
-- `rebase` — public package
-- `@rebase/adapters` — framework host adapters
+- Node.js 20+
+- npm
+
+Run the test suite:
+
+```bash
+npm test
+```
 
 ## Status
 
-Experimental alpha. The API is intentionally small and likely to change.
+**Beta.**
+
+The API is usable for experimentation and plugin development, but minor API changes may still happen before 1.0.
+
+See the [roadmap](ROADMAP.md) and the [documentation](https://js-rebase.github.io).
 
 ## License
 
