@@ -1,339 +1,44 @@
-const BUILT_INS = new Set(["expression", "if", "each", "else", "elif"]);
-
-export class Rebase {
-  constructor(options = {}) {
-    this.options = options;
-    this.scope = options.scope ?? {};
-    this.syntax = new SyntaxRegistry();
-    this.plugins = new Map();
-    this.roots = new Set();
-
-    if (options.host) this.host(options.host);
-    if (options.builtIns !== false) registerBuiltIns(this);
-  }
-
-  host(nameOrOptions) {
-    const hosts = typeof nameOrOptions === "string"
-      ? { name: nameOrOptions }
-      : nameOrOptions;
-
-    const disabled = HOST_RESERVED[hosts.name] ?? [];
-    for (const syntax of disabled) this.syntax.disable(syntax.type, syntax.name);
-    return this;
-  }
-
-  use(plugin, options = {}) {
-    const normalized = plugin?.default ?? plugin;
-    if (!normalized) throw new TypeError("Rebase.use(): plugin is required.");
-
-    if (typeof normalized === "function") {
-      normalized(this.api(), options);
-    } else if (typeof normalized.install === "function") {
-      normalized.install(this.api(), options);
-    } else {
-      throw new TypeError("Rebase.use(): plugin must be a function or expose install().");
-    }
-
-    if (normalized.name) this.plugins.set(normalized.name, normalized);
-    return this;
-  }
-
-  directive(name, handler, options = {}) {
-    return this.syntax.directive(name, handler, options);
-  }
-
-  expression(name, handler, options = {}) {
-    return this.syntax.expression(name, handler, options);
-  }
-
-  block(name, handler, options = {}) {
-    return this.syntax.block(name, handler, options);
-  }
-
-  hook(name, handler) {
-    return this.syntax.hook(name, handler);
-  }
-
-  api() {
-    return Object.freeze({
-      version,
-      rebase: this,
-      directive: this.directive.bind(this),
-      expression: this.expression.bind(this),
-      block: this.block.bind(this),
-      hook: this.hook.bind(this),
-      syntax: this.syntax
-    });
-  }
-
-  mount(target, options = {}) {
-    const root = resolveTarget(target);
-    if (!root) throw new Error("Rebase.mount(): target not found.");
-
-    const record = {
-      root,
-      source: options.template ?? root.innerHTML,
-      scope: { ...this.scope, ...(options.scope ?? {}) },
-      options
-    };
-
-    this.roots.add(record);
-    this.render(record);
-
-    return {
-      update: () => this.render(record),
-      unmount: () => {
-        this.roots.delete(record);
-        root.innerHTML = record.source;
-      }
-    };
-  }
-
-  transform(source, options = {}) {
-    const host = options.host ?? this.options.host;
-    const scope = options.scope ?? this.scope;
-    return this.syntax.process(source, scope, this, { host });
-  }
-
-  render(record) {
-    let html = record.source;
-    html = this.syntax.process(html, record.scope, this);
-    record.root.innerHTML = html;
-    bindEvents(record.root, record.scope);
-    this.hook("render", { root: record.root, scope: record.scope });
-    return html;
-  }
-
-  update() {
-    for (const record of this.roots) this.render(record);
-    return this;
-  }
-}
+export const version = "1.0.0-alpha.2";
 
 export class SyntaxRegistry {
-  constructor() {
-    this.directives = new Map();
-    this.expressions = new Map();
-    this.blocks = new Map();
-    this.hooks = new Map();
-    this.disabled = new Map();
-  }
-
-  directive(name, handler, options = {}) {
-    assertName(name);
-    this.directives.set(name, { handler, options });
-    return this;
-  }
-
-  expression(name, handler, options = {}) {
-    assertName(name);
-    this.expressions.set(name, { handler, options });
-    return this;
-  }
-
-  block(name, handler, options = {}) {
-    assertName(name);
-    this.blocks.set(name, { handler, options });
-    return this;
-  }
-
-  hook(name, handler) {
-    const list = this.hooks.get(name) ?? [];
-    list.push(handler);
-    this.hooks.set(name, list);
-    return this;
-  }
-
-  disable(type, name) {
-    const set = this.disabled.get(type) ?? new Set();
-    set.add(name);
-    this.disabled.set(type, set);
-    return this;
-  }
-
-  isEnabled(type, name) {
-    return !this.disabled.get(type)?.has(name);
-  }
-
-  process(source, scope, rebase, options = {}) {
-    let output = source;
-    const host = options.host ?? rebase.options.host;
-
-    output = processBlocks(output, this.blocks, scope, rebase, this, host);
-    output = processDirectives(output, this.directives, scope, rebase);
-    if (!host) output = processExpressions(output, this.expressions, scope, rebase);
-    if (!host) output = interpolate(output, scope);
-    return output;
-  }
+  constructor(){this.expressions=new Map();this.directives=new Map();this.blocks=new Map();this.hooks=new Map();this.disabled=new Map();}
+  expression(name,handler,options={}){add(this.expressions,name,handler,options);return this}
+  directive(name,handler,options={}){add(this.directives,name,handler,options);return this}
+  block(name,handler,options={}){add(this.blocks,name,handler,options);return this}
+  hook(name,handler){if(typeof handler!=="function")throw new TypeError("Invalid hook");(this.hooks.get(name)||this.hooks.set(name,[]).get(name)).push(handler);return this}
+  disable(type,name){(this.disabled.get(type)||this.disabled.set(type,new Set()).get(type)).add(name);return this}
+  enabled(type,name){return !this.disabled.get(type)?.has(name)}
+  emit(name,value){for(const fn of this.hooks.get(name)||[])fn(value)}
 }
 
-export function plugin(definition) {
-  return definition;
+export class Rebase {
+  constructor(options={}){this.options={...options};this.scope=options.scope||{};this.syntax=new SyntaxRegistry();this.plugins=new Map();this.roots=new Set();if(options.host)this.host(options.host);if(options.builtIns!==false)builtIns(this)}
+  host(name){this.options.host=name;for(const x of HOSTS[name]||[])this.syntax.disable(x[0],x[1]);return this}
+  use(plugin,options={}){const p=plugin?.default||plugin;if(typeof p==="function")p(this.api(),options);else if(p?.install)p.install(this.api(),options);else throw new TypeError("Invalid Rebase plugin");if(p?.name)this.plugins.set(p.name,p);return this}
+  expression(n,h,o){this.syntax.expression(n,h,o);return this}
+  directive(n,h,o){this.syntax.directive(n,h,o);return this}
+  block(n,h,o){this.syntax.block(n,h,o);return this}
+  hook(n,h){this.syntax.hook(n,h);return this}
+  api(){return Object.freeze({version,rebase:this,expression:this.expression.bind(this),directive:this.directive.bind(this),block:this.block.bind(this),hook:this.hook.bind(this),syntax:this.syntax})}
+  async transform(source,{scope={},host=this.options.host}={}){return render(String(source),{...this.scope,...scope},this,host)}
+  mount(target,{template,scope={}}={}){const root=typeof target==="string"?document.querySelector(target):target;if(!root)throw new Error("Rebase mount target not found");const record={root,source:template??root.innerHTML,scope:{...this.scope,...scope}};this.roots.add(record);this.render(record);return{update:()=>this.render(record),unmount:()=>{this.roots.delete(record);root.innerHTML=record.source}}}
+  render(record){const html=renderSync(record.source,record.scope,this,this.options.host);record.root.innerHTML=html;bind(record.root,record.scope);this.syntax.emit("render",{root:record.root,scope:record.scope});return html}
+  update(){for(const r of this.roots)this.render(r);return this}
 }
 
-export function createRebase(options) {
-  return new Rebase(options);
-}
+export const createRebase=options=>new Rebase(options);
+export const plugin=definition=>definition;
 
-export const hosts = {
-  svelte: {
-    name: "svelte",
-    reserved: HOST_RESERVED.svelte
-  },
-  vue: {
-    name: "vue",
-    reserved: HOST_RESERVED.vue
-  },
-  react: {
-    name: "react",
-    reserved: HOST_RESERVED.react
-  }
-};
+function builtIns(r){r.expression("value",x=>evalIn(x.expression,x.scope));r.block("if",x=>evalIn(x.expression,x.scope)?x.body:"");r.block("each",x=>{const m=x.expression.match(/^(.+?)\s+as\s+([A-Za-z_$][\w$]*)(?:\s*,\s*([A-Za-z_$][\w$]*))?$/);if(!m)return"";const list=evalIn(m[1],x.scope);if(!list?.[Symbol.iterator])return"";return[...list].map((v,i)=>renderSync(x.body,{...x.scope,[m[2]]:v,...m[3]?[m[3]]:[],...(m[3]?{[m[3]]:i}:{})},x.rebase)).join("")})}
 
-function registerBuiltIns(rebase) {
-  rebase.expression("value", ({ expression, scope }) => evaluate(expression, scope));
-  rebase.block("if", ({ expression, body, scope }) =>
-    evaluate(expression, scope) ? body : ""
-  );
-  rebase.block("each", ({ expression, body, scope }) => {
-    const match = expression.match(/^(.+?)\\s+as\\s+([A-Za-z_$][\\w$]*)(?:\\s*,\\s*([A-Za-z_$][\\w$]*))?$/);
-    if (!match) return "";
-    const collection = evaluate(match[1], scope);
-    if (collection == null || typeof collection[Symbol.iterator] !== "function") return "";
-    return [...collection].map((item, index) => {
-      const child = { ...scope, [match[2]]: item };
-      if (match[3]) child[match[3]] = index;
-      return processBuiltInBody(body, child);
-    }).join("");
-  });
-}
+function renderSync(s,scope,r,host){let out=s;out=blocks(out,r,scope,host);out=directives(out,r,scope);if(!host)out=out.replace(/\{\{([^{}]+)\}\}/g,(_,e)=>esc(evalIn(e.trim(),scope)));return out}
+async function render(s,scope,r,host){let out=s;out=blocks(out,r,scope,host);out=await directivesAsync(out,r,scope);if(!host)out=out.replace(/\{\{([^{}]+)\}\}/g,(_,e)=>esc(evalIn(e.trim(),scope)));return out}
 
-function processBuiltInBody(body, scope) {
-  return body.replace(/\\{\\s*([^{}]+?)\\s*\\}/g, (_, expression) =>
-    escapeHtml(evaluate(expression, scope))
-  );
-}
-
-function processBlocks(source, blocks, scope, rebase, registry, host) {
-  const pattern = /\\{#([A-Za-z_$][\\w$-]*)(?:\\s+([^}]*))?\\}([\\s\\S]*?)\\{\\/([A-Za-z_$][\\w$-]*)\\}/g;
-
-  return source.replace(pattern, (full, name, expression = "", body, closing) => {
-    if (name !== closing || !registry.isEnabled("block", name)) return full;
-    if (host && !registry.isEnabled("block", name)) return full;
-    const entry = blocks.get(name);
-    if (!entry) return full;
-
-    const branches = splitBranches(body);
-    const result = entry.handler({
-      name,
-      expression: expression.trim(),
-      body: branches.length > 1 ? branches : body,
-      scope,
-      rebase
-    });
-
-    return result == null ? "" : String(result);
-  });
-}
-
-function processDirectives(source, directives, scope, rebase) {
-  return source.replace(/\\{@([A-Za-z_$][\\w$:-]*)(?:\\s+([^{}]*?))?\\}/g, (full, name, expression = "") => {
-    const entry = directives.get(name);
-    if (!entry) return full;
-    const result = entry.handler({
-      name,
-      expression: expression.trim(),
-      scope,
-      rebase
-    });
-    return result == null ? "" : String(result);
-  });
-}
-
-function processExpressions(source, expressions, scope, rebase) {
-  return source.replace(/\\{([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)*)\\}/g, (full, name) => {
-    const entry = expressions.get(name);
-    if (!entry) return full;
-    const result = entry.handler({ name, expression: name, scope, rebase });
-    return escapeHtml(result);
-  });
-}
-
-function interpolate(source, scope) {
-  return source.replace(/\\{\\{([^{}]+)\\}\\}/g, (_, expression) =>
-    escapeHtml(evaluate(expression.trim(), scope))
-  );
-}
-
-function splitBranches(body) {
-  const marker = /\\{:(else|elif)\\b([^}]*)\\}/g;
-  const branches = [];
-  let cursor = 0;
-  let expression = null;
-  let match;
-
-  while ((match = marker.exec(body))) {
-    branches.push({ expression, content: body.slice(cursor, match.index) });
-    expression = match[1] === "elif" ? match[2].trim() : null;
-    cursor = marker.lastIndex;
-  }
-
-  branches.push({ expression, content: body.slice(cursor) });
-  return branches;
-}
-
-function bindEvents(root, scope) {
-  for (const element of root.querySelectorAll("*")) {
-    for (const attribute of [...element.attributes]) {
-      if (!attribute.name.startsWith("on:")) continue;
-      const eventName = attribute.name.slice(3);
-      const expression = attribute.value.replace(/^\\{|\\}$/g, "").trim();
-      element.removeAttribute(attribute.name);
-      element.addEventListener(eventName, event =>
-        evaluate(expression, { ...scope, event })
-      );
-    }
-  }
-}
-
-function evaluate(expression, scope) {
-  try {
-    return Function("scope", "with (scope) { return (" + expression + "); }")(scope);
-  } catch {
-    return undefined;
-  }
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function resolveTarget(target) {
-  if (typeof document === "undefined") throw new Error("Rebase.mount() requires a browser.");
-  return typeof target === "string" ? document.querySelector(target) : target;
-}
-
-function assertName(name) {
-  if (!/^[A-Za-z_$][\\w$-]*$/.test(name)) {
-    throw new TypeError("Invalid Rebase syntax name: " + name);
-  }
-}
-
-const HOST_RESERVED = {
-  svelte: [
-    { type: "block", name: "if" },
-    { type: "block", name: "each" },
-    { type: "block", name: "await" },
-    { type: "block", name: "key" },
-    { type: "block", name: "snippet" }
-  ],
-  vue: [],
-  react: []
-};
-
-export const version = "1.0.0-alpha.1";
+function blocks(s,r,scope,host){const re=/\{#([\w$-]+)(?:\s+([^}]*))?\}([\s\S]*?)\{\/\1\}/g;return s.replace(re,(full,n,e,b)=>{if(!r.syntax.enabled("block",n)||host&&HOSTS[host]?.some(x=>x[0]==="block"&&x[1]===n))return full;const h=r.syntax.blocks.get(n);if(!h)return full;return String(h.handler({name:n,expression:(e||"").trim(),body:blocks(b,r,scope,host),scope,rebase:r})??"")})}
+function directives(s,r,scope){return s.replace(/\{@([\w$:-]+)(?:\s+([^{}]*))?\}/g,(full,n,e)=>{const h=r.syntax.directives.get(n);if(!h)return full;const v=h.handler({name:n,expression:(e||"").trim(),scope,rebase:r});if(v?.then)throw new Error("Async Rebase plugin requires transform()");return v==null?"":String(v)})}
+async function directivesAsync(s,r,scope){let out="",i=0;for(const m of s.matchAll(/\{@([\w$:-]+)(?:\s+([^{}]*))?\}/g)){out+=s.slice(i,m.index);const h=r.syntax.directives.get(m[1]);if(!h)out+=m[0];else out+=String(await h.handler({name:m[1],expression:(m[2]||"").trim(),scope,rebase:r})??"");i=m.index+m[0].length}return out+s.slice(i)}
+function bind(root,scope){for(const el of root.querySelectorAll("*"))for(const a of [...el.attributes])if(a.name.startsWith("on:")){const e=a.name.slice(3),x=a.value.replace(/^\{|\}$/g,"");el.removeAttribute(a.name);el.addEventListener(e,ev=>evalIn(x,{...scope,event:ev}))}}
+function evalIn(e,s){try{return Function("scope","with(scope)return ("+e+")")(s)}catch{return undefined}}
+function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;")}
+function add(map,name,handler,options){if(!/^[A-Za-z_$][\w$-]*$/.test(name)||typeof handler!=="function")throw new TypeError("Invalid Rebase syntax registration");map.set(name,{handler,options})}
+const HOSTS={svelte:[["block","if"],["block","each"],["block","await"],["block","key"],["block","snippet"]],vue:[],react:[]};
