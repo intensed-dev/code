@@ -1,1 +1,0 @@
-export { compile, compileFile } from "./src/compiler.js";
