@@ -1,4 +1,4 @@
-export const version = "1.0.0-alpha.2";
+export const version = "1.0.0-beta.1";
 
 export class SyntaxRegistry {
   constructor(){this.expressions=new Map();this.directives=new Map();this.blocks=new Map();this.hooks=new Map();this.disabled=new Map();}
