@@ -1,7 +1,10 @@
 {
   "name": "rebase",
-  "version": "0.3.0",
+  "version": "1.0.0-alpha.1",
+  "description": "A framework-agnostic JavaScript enhancement layer with an extensible syntax API.",
   "type": "module",
-  "main": "./index.js",
-  "exports": "./index.js"
+  "main": "index.js",
+  "module": "index.js",
+  "exports": { ".": "./index.js" },
+  "license": "MIT"
 }
