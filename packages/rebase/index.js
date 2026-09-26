@@ -1,1 +1,1 @@
-export { component, mount, createApp, state, computed, effect, watch, render, html, createRouter } from "../runtime/src/index.js";
+export * from "../core/index.js";
