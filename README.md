@@ -2,7 +2,6 @@
 
 [![Beta](https://img.shields.io/badge/status-beta-7c3aed.svg)](https://github.com/intensed-dev/code)
 [![License](https://img.shields.io/github/license/intensed-dev/code.svg)](LICENSE)
-[![Tests](https://img.shields.io/github/actions/workflow/status/intensed-dev/code/ci.yml?label=tests)](https://github.com/intensed-dev/code/actions)
 
 **A JavaScript-first enhancement layer for the web.**
 
