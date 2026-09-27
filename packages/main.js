@@ -1,11 +1,9 @@
 // rebase - main.js
-import { processIncludes } from "includes/index.js";
+import { load } from "./includes/index.js";
 
 const rebase = {
   include: {
-    load() {
-      await processIncludes();
-    }
+    load
   }
 };
 
